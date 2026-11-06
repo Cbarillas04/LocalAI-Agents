@@ -1,15 +1,31 @@
 import sqlite3
 
+# Testing
 connection = sqlite3.connect("data/local_ai.db")
+cursor = connection.execute("""
+    SELECT *
+    FROM api_usage
+    ORDER BY id DESC
+    LIMIT 1
+""")
+print(cursor.fetchone())
 
+connection.close()
+
+# Practice
+'''
 # Table creation
 connection.execute("""
     CREATE TABLE IF NOT EXISTS api_usage (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         request_date TEXT,
-        credits_used INTEGER
-    )
+        credits_used INTEGER,
+        usage_type TEXT,
+        endpoint TEXT,
+        request_status TEXT
+    );
 """)
+
 
 # Insertion
 connection.execute("""
@@ -76,3 +92,4 @@ connection.commit()
 
 
 connection.close()
+'''
