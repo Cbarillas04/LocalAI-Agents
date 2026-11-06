@@ -1,3 +1,4 @@
+import re
 from shared.ai_client import AIClient
 from shared.web_search import WebSearch
 
@@ -21,7 +22,7 @@ class ResearchAgent:
         - State when supplied sources wasn't enough to generate a confident answer
         - Only respond in English
         
-        Be accurate, structured and pratical.
+        Be accurate and structured.
         """
 
         # Store the conversations for each new chat
@@ -29,6 +30,31 @@ class ResearchAgent:
                 "role" : "system",
                 "content" : self.system_prompt
             }]
+
+    # Validate that all Ai-gen citations are connected to a valid citation
+    # Returns dictionary {Valid?, invalid list}
+    def validate(self, answer):
+        # getting generated citation ids
+        rexp = []
+        for group in re.findall(r'\[(\d+(?:,\s*\d+)*)\]', answer):
+            for citation in group.split(","):
+                rexp.append(citation.strip())
+
+        # Valid citations
+        valid_ids = []
+        for source in self.search_sources:
+            valid_ids.append(str(source["id"]))
+
+        # Validating the generated citations
+        invalid_ids = []
+        for cite in rexp:
+            if cite not in valid_ids:
+                invalid_ids.append(cite)
+                
+        isValid = True
+        if invalid_ids:
+            isValid = False
+        return {"is_valid": isValid, "invalid_ids": invalid_ids}
 
     def research(self, question):
         # Search for context
@@ -50,7 +76,12 @@ class ResearchAgent:
         # Format each k sites
         search_context = ""
         for site in self.search_sources:
-            search_context += (f"Source ID: [{site['id']}]\n Source: {site['title']}\nURL: {site['url']}\nContent: {site['content']}\n\n")
+            search_context += (f"""
+            Source ID: [{site['id']}]\n
+            Source: {site['title']}\n
+            URL: {site['url']}\n
+            Content: {site['content']}\n
+            \n""")
 
         # Prompt the AI
         self.conversation.append({
@@ -67,9 +98,11 @@ class ResearchAgent:
             messages = self.conversation,
             temperature = 0.3
         )
-
         # Get answer
         answer = response.choices[0].message.content
+
+        # Validate citations
+        citations = self.validate(answer)
 
         # Store the answer
         self.conversation.append({
@@ -77,4 +110,8 @@ class ResearchAgent:
                 "content" : answer
             })
 
-        return {"answer": answer, "sources": self.search_sources}
+        return {
+            "answer": answer,
+            "sources": self.search_sources,
+            "citation_validation": citations
+        }

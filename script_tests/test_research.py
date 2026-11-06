@@ -12,3 +12,5 @@ print(f"Answer: {result['answer']}")
 print("\nSources:")
 for source in result["sources"]:
     print(f"[{source['id']}]Title: {source['title']}\nURL: {source['url']}\n")
+if not result["citation_validation"]["is_valid"]:
+    print("Invalid citations found: ", result["citation_validation"]["invalid_ids"])
