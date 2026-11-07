@@ -1,10 +1,11 @@
 import sqlite3
 from datetime import date
+from pathlib import Path
 
 # Track the Tavily API credits used
-class UsageTracking():
+class UsageTracking:
     def __init__(self):
-        self.db_path = "data/local_ai.db"
+        self.db_path = Path(__file__).resolve().parent.parent/"data"/"local_ai.db"
         self.connection = sqlite3.connect(self.db_path)
         self.connection.execute("""
             CREATE TABLE IF NOT EXISTS api_usage (
