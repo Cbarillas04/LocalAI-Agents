@@ -4,19 +4,20 @@ from shared.web_search import WebSearch
 
 class ResearchAgent:
     def __init__(self):
+        self.search_sources = None
         self.ai = AIClient()
         self.web_search = WebSearch()
         # Assign agent behavior
         self.system_prompt = """
         You are a technical assistant.
         
-        You responsbilities are to:
+        You responsibilities are to:
         - Explain technical concepts clearly.
         - Research and compare technologies approaches.
-        - Break complex problems into manageble steps.
+        - Break complex problems into manageable steps.
         - Distinguish established facts from assumptions.
         - Use the provided web search results when answering.
-        - Cite sources using their titeles and urls.
+        - Cite sources using their titles and urls.
         - Cite claims using numbered references such as [1], [2].
         - Never invent sources, citations, or facts.
         - State when supplied sources wasn't enough to generate a confident answer

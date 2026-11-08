@@ -8,11 +8,11 @@ results = web.search(
     max_results = 5
 )
 '''
-web.usage_tracker.get_monthly_usage = lambda: 1000
-try:
-    web.client.search("test query")
-except ValueError as err:
-    print("Over monthly usage", err)
+first_search = web.search("What is Python?")
+second_search = web.search("What is Python?")
+
+print("First search:", first_search)
+print("Second search:", second_search)
 
 '''
 # Check recorded usage

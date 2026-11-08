@@ -1,20 +1,12 @@
 import sqlite3
+from shared.usage_tracking import UsageTracking
 
 # Testing
-connection = sqlite3.connect("data/local_ai.db")
-cursor = connection.execute("""
-    SELECT *
-    FROM api_usage
-    ORDER BY id DESC
-    LIMIT 1
-""")
-print(cursor.fetchone())
+tracker = UsageTracking()
+connection = sqlite3.connect(tracker.db_path)
 
-connection.close()
-
-# Practice
-'''
 # Table creation
+# Usage credit tracker table
 connection.execute("""
     CREATE TABLE IF NOT EXISTS api_usage (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +18,20 @@ connection.execute("""
     );
 """)
 
+# Query Cache Table
+connection.execute("""
+    CREATE TABLE IF NOT EXISTS search_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query TEXT UNIQUE NOT NULL,
+        results TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+""")
+connection.commit()
+connection.close()
 
+# Practice
+'''
 # Insertion
 connection.execute("""
     INSERT INTO api_usage (request_date, credits_used) VALUES (?, ?)""",
@@ -72,20 +77,6 @@ cursor = connection.execute("PRAGMA table_info(api_usage)")
 for column in cursor.fetchall():
     print(column)
 
-connection.execute("""
-    ALTER TABLE api_usage
-    ADD COLUMN endpoint TEXT
-""")
-
-connection.execute("""
-    ALTER TABLE api_usage
-    ADD COLUMN usage_type TEXT
-""")
-
-connection.execute("""
-    ALTER TABLE api_usage
-    ADD COLUMN request_status TEXT
-""")
 
 connection.commit()
 

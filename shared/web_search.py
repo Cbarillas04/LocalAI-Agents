@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from tavily import TavilyClient
 from .usage_tracking import UsageTracking
+from .search_cache import SearchCache
 
 
 # Handles websearching through Tavily search API
@@ -14,6 +15,7 @@ class WebSearch:
         load_dotenv()
         self.api_key = os.getenv("TAVILY_API_KEY")
         self.usage_tracker = UsageTracking()
+        self.search_cache = SearchCache()
 
         if not self.api_key:
             raise ValueError(
@@ -41,17 +43,26 @@ class WebSearch:
     # Search the web returning k max results
     def search(self, query, max_results = 5):
         try:
-            warning = self.warning_check()
-            if warning >= self.get_monthly_usage():
+            # Check if query already exists in cache, return if so
+            cache = self.search_cache.get_search_cache_by_query(query)
+            if cache is not None:
+                return cache
+
+            # Check monthly credit limit
+            if self.usage_tracker.get_monthly_usage() >= self.monthly_credit_limit:
                 raise ValueError("Monthly credit limit reached")
-            elif warning is not None:
-                print(f"WARNING: Monthly credit usage has reached {warning}")
+
+            # Give warnings depending on API usage %
+            warning = self.warning_check()
+            if warning is not None:
+                print(f"WARNING: Monthly credit usage has reached {warning}%")
 
             response = self.client.search(
                 query = query,
                 max_results = max_results,
                 search_depth = "basic"
             )
+            self.search_cache.create_cache(query, response["results"])
             self.usage_tracker.create_usage(1, "estimated", "search", "success")
             return response["results"]
         except Exception as err:
