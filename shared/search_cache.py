@@ -4,10 +4,12 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 class SearchCache:
-    def __init__(self):
-        self.db_path = Path(__file__).resolve().parent.parent / "data" / "local_ai.db"
+    def __init__(self, db_path = None):
+        default_path = Path(__file__).resolve().parent.parent / "data" / "local_ai.db"
+        self.db_path = db_path or default_path
         self.connection = sqlite3.connect(self.db_path)
         self.expiration_period = timedelta(hours = 24)
+
         self.connection.execute("""
             CREATE TABLE IF NOT EXISTS search_cache(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

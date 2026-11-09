@@ -4,9 +4,11 @@ from pathlib import Path
 
 # Track the Tavily API credits used
 class UsageTracking:
-    def __init__(self):
-        self.db_path = Path(__file__).resolve().parent.parent/"data"/"local_ai.db"
+    def __init__(self, db_path = None):
+        default_path = Path(__file__).resolve().parent.parent / "data" / "local_ai.db"
+        self.db_path = db_path or default_path
         self.connection = sqlite3.connect(self.db_path)
+
         self.connection.execute("""
             CREATE TABLE IF NOT EXISTS api_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +25,7 @@ class UsageTracking:
     # Insert a row when API credit(s) used
     def create_usage(self, credits_used, usage_type, endpoint, request_status):
         self.connection = sqlite3.connect(self.db_path)
-        self.connection.execute("""
+        self.connection.execute(""" 
             INSERT INTO api_usage (request_date, credits_used, usage_type, endpoint, request_status)
             VALUES (?, ?, ? ,? , ?);
         """, (date.today(),credits_used, usage_type, endpoint, request_status))
