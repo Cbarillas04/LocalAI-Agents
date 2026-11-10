@@ -37,7 +37,7 @@ class ResearchAgent:
     def validate(self, answer):
         # getting generated citation ids
         rexp = []
-        for group in re.findall(r'\[(\d+(?:,\s*\d+)*)\]', answer):
+        for group in re.findall(r"\[(\d+(?:,\s*\d+)*)\]", answer):
             for citation in group.split(","):
                 rexp.append(citation.strip())
 
