@@ -154,20 +154,12 @@ def test_warning():
 
         search = WebSearch()
         thresholds = (0, 500, 750, 900, 950)
-
-        def test_warning():
-            with patch("shared.web_search.load_dotenv"), \
-                    patch("shared.web_search.os.getenv", return_value="test-api-key"), \
-                    patch("shared.web_search.UsageTracking") as mock_usage:
-
-                search = WebSearch()
-                thresholds = (0, 500, 750, 900, 950)
-                for value in thresholds:
-                    if value == 0:
-                        assert search.warning_check() is None
-                        continue
-                    mock_usage.return_value.get_monthly_usage.return_value = value
-                    assert search.warning_check() == (value / 10)
+        for value in thresholds:
+            mock_usage.return_value.get_monthly_usage.return_value = value
+            if value == 0:
+                assert search.warning_check() is None
+                continue
+            assert search.warning_check() == (value / 10)
 
 
 
