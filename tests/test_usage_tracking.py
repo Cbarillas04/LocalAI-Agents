@@ -19,7 +19,7 @@ def test_get_monthly_usage(tmp_path):
 # Test 3: monthly usage only counts this month and not previous
 def  test_get_monthly_usage_ignores_others(tmp_path):
     import sqlite3
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
     db_path = tmp_path / "test_usage.db"
     tracker = UsageTracking(db_path)
     connection = sqlite3.connect(db_path)

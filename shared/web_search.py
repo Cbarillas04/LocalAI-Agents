@@ -19,7 +19,7 @@ class WebSearch:
 
         if not self.api_key:
             raise ValueError(
-                "Tavily API Key nto found"
+                "Tavily API Key not found"
             )
 
         # Create connection
