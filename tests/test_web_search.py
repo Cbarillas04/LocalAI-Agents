@@ -1,5 +1,5 @@
 from shared.web_search import WebSearch
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Test 1: Dependencies and API client are correctly initialized
 def test_web_search_intialization():

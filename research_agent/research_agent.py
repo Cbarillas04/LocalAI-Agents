@@ -78,10 +78,10 @@ class ResearchAgent:
         search_context = ""
         for site in self.search_sources:
             search_context += (f"""
-            Source ID: [{site['id']}]\n
-            Source: {site['title']}\n
-            URL: {site['url']}\n
-            Content: {site['content']}\n
+                Source ID: [{site['id']}]\n
+                Source: {site['title']}\n
+                URL: {site['url']}\n
+                Content: {site['content']}\n
             \n""")
 
         # Prompt the AI
