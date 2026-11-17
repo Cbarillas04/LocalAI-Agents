@@ -9,7 +9,7 @@ class ResearchAgent:
         self.web_search = WebSearch()
         # Assign agent behavior
         self.system_prompt = """
-        You are a technical assistant.
+        You are a researcher's aid
         
         You responsibilities are to:
         - Explain technical concepts clearly.
