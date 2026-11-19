@@ -1,3 +1,5 @@
+import pytest
+import shutil
 from coding_agent.coding_agent import CodingAgent
 from unittest.mock import patch, MagicMock
 
@@ -65,3 +67,144 @@ def test_chat_conversation_history():
         assert agent.conversation[3]["content"] == "What is Java?"
         assert agent.conversation[4]["content"] == "Python is a programming language"
 
+# Test 4: Adds a valid project when root is valid
+def test_open_project_success(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+    agent.open_project(test_dir)
+    assert agent.project.root == test_dir.resolve()
+
+# Test 5: ValueError on invalid root
+def test_open_project_failure(tmp_path):
+    agent = CodingAgent()
+    test_file = tmp_path / "Project"
+
+    with pytest.raises(ValueError):
+        agent.open_project(test_file)
+    assert agent.project is None
+
+# Test 6: Gets and returns summary of an opened project
+def test_get_project_summary_success(tmp_path):
+    agent = CodingAgent()
+
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    (test_dir / "main.py").write_text("print('Hello')")
+    (test_dir / "helper.py").write_text("print('Helper')")
+    (test_dir / "README.txt").write_text("Project description")
+
+    agent.open_project(test_dir)
+    result = agent.get_project_summary()
+
+    assert result == {
+        "total_files": 3,
+        "total_directories": 0,
+        "file_types": {
+            ".py": 2,
+            ".txt": 1
+        }
+    }
+
+# Test 7: ValueError when no project is open
+def test_get_project_summary_no_project():
+    agent = CodingAgent()
+    with pytest.raises(ValueError):
+        agent.get_project_summary()
+
+# Test 8: Raise ValueError when project directory is removed
+def test_get_project_summary_invalid_project(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    agent.open_project(test_dir)
+    # delete directory
+    shutil.rmtree(test_dir)
+
+    with pytest.raises(ValueError):
+        agent.get_project_summary()
+
+#Test 9: Returns only the file of requested file type
+def test_find_project_files_by_pattern(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    (test_dir / "main.py").write_text("print('Hello')")
+    (test_dir / "helper.py").write_text("print('Helper')")
+    (test_dir / "README.txt").write_text("Project description")
+
+    agent.open_project(test_dir)
+
+    result = agent.find_project_files("*.py")
+
+    assert len(result) == 2
+    assert all(file.suffix == ".py" for file in result)
+
+# Test 10: Verifies empty list on return when no matching files
+def test_find_project_files_no_matches(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    (test_dir / "main.py").write_text("print('Hello')")
+
+    agent.open_project(test_dir)
+
+    result = agent.find_project_files("*.json")
+
+    assert result == []
+
+# Test 11: ValueError when no project opened
+def test_find_project_files_no_project():
+    agent = CodingAgent()
+    with pytest.raises(ValueError):
+        agent.find_project_files("*.py")
+
+# Test 12: file was read without issues
+def test_read_project_file_success(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    test_file = test_dir / "main.py"
+    test_file.write_text("print('Hello World')")
+
+    agent.open_project(test_dir)
+    result = agent.read_project_file(test_file)
+
+    assert result == "print('Hello World')"
+
+# Test 13: ValuError when a file doesn't exist
+def test_read_project_file_missing(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    agent.open_project(test_dir)
+
+    with pytest.raises(ValueError):
+        agent.read_project_file(test_dir / "missing.py")
+
+# Test 14: ValuerError when trying to read a file outside of project
+def test_read_project_file_foreign(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    foreign_file = tmp_path / "outside.py"
+    foreign_file.write_text("print('Outside')")
+
+    agent.open_project(test_dir)
+
+    with pytest.raises(ValueError):
+        agent.read_project_file(foreign_file)
+
+# Test 15: ValueError when no project is open
+def test_read_project_file_no_project():
+    agent = CodingAgent()
+
+    with pytest.raises(ValueError):
+        agent.read_project_file("main.py")

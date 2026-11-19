@@ -1,8 +1,10 @@
 from shared.ai_client import AIClient
+from coding_agent.project_manager import ProjectManager
 
 class CodingAgent:
     def __init__(self):
         self.ai = AIClient()
+        self.project = None
         # behavior of the AI
         self.system_prompt = """
             You are a technical coding helper and teacher
@@ -26,6 +28,31 @@ class CodingAgent:
             "role": "system",
             "content": self.system_prompt
         }]
+
+    # Get project summary of active open project
+    def get_project_summary(self):
+        if self.project is None or not self.project.validate_project():
+            raise ValueError("No valid project is open")
+        return self.project.get_project_summary()
+
+    # Get all files by type
+    def find_project_files(self, pattern):
+        if self.project is None or not self.project.validate_project():
+            raise ValueError("No valid project is open")
+        return self.project.find_files(pattern)
+
+    # Read a project file
+    def read_project_file(self, file):
+        if self.project is None or not self.project.validate_project():
+            raise ValueError("No valid project is open")
+        return self.project.read_file(file)
+
+    # When supplied with a project root, assign project attribute
+    def open_project(self, root):
+        self.project = ProjectManager(root)
+        if not self.project.validate_project():
+            self.project = None
+            raise ValueError("Project root is not valid")
 
     def chat(self, prompt):
         # Prompt the AI
