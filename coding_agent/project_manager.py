@@ -18,3 +18,17 @@ class ProjectManager:
                 if file.is_file()
         ]
         return files
+
+    # Read text within a file
+    def read_file(self, file_path):
+        file_path = Path(file_path).resolve()
+        # Assert file exists in project directory
+        try:
+            file_path.relative_to(self.root)
+        except ValueError:
+            raise ValueError("Invalid file path: {}".format(file_path))
+        # File exists and is a file
+        if not file_path.is_file() or not file_path.exists():
+            raise ValueError("Invalid file path")
+
+        return file_path.read_text()
