@@ -122,3 +122,35 @@ def test_project_summary_empty(tmp_path):
         "file_types": {}
     }
     assert result == expected
+
+# Test 11: Checks project tree structure
+def test_project_tree(tmp_path):
+    project = tmp_path / "project"
+    scripts = project / "scripts"
+    assets = project / "assets"
+
+    scripts.mkdir(parents = True)
+    assets.mkdir()
+
+    (project / "main.py").write_text("print('hello')")
+    (scripts / "player.py").write_text("print('player')")
+    (assets / "texture.png").write_text("fake image")
+
+    project_manager = ProjectManager(project)
+    result = project_manager.get_project_tree()
+
+    expected = [
+        "assets/",
+        "assets/texture.png",
+        "main.py",
+        "scripts/",
+        "scripts/player.py"
+    ]
+
+    assert sorted(result) == expected
+
+# Test 12: Checks that it returns empty list if project is empty
+def test_project_tree_empty(tmp_path):
+    project_manager = ProjectManager(tmp_path)
+
+    assert project_manager.get_project_tree() == []

@@ -19,6 +19,16 @@ class ProjectManager:
         ]
         return files
 
+    # Filter and return specific files
+    def find_files(self, pattern):
+        if not self.validate_project():
+            raise ValueError("Invalid project directory")
+        files = [
+            file for file in self.root.rglob(pattern)
+            if file.is_file()
+        ]
+        return files
+
     # Read text within a file
     def read_file(self, file_path):
         file_path = Path(file_path).resolve()
@@ -33,6 +43,7 @@ class ProjectManager:
 
         return file_path.read_text()
 
+    # Get and return a summary on the project
     def get_project_summary(self):
         if not self.validate_project():
             raise ValueError("Invalid project directory")
@@ -61,4 +72,20 @@ class ProjectManager:
             "total_directories": len(directories),
             "file_types": file_types,
         }
+
+    # Returns representation of project directory
+    def get_project_tree(self):
+        if not self.validate_project():
+            raise ValueError("Invalid project directory")
+
+        tree = []
+        for data in self.root.rglob('*'):
+            abs_data = data.relative_to(self.root)
+            # append trailing forward slash if directory
+            if  data.is_dir():
+                tree.append(abs_data.as_posix() + "/")
+            else:
+                tree.append(abs_data.as_posix())
+
+        return tree
 
