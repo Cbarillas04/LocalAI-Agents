@@ -86,3 +86,39 @@ def test_read_file_directory(tmp_path):
     project_manager = ProjectManager(tmp_path)
     with pytest.raises(ValueError):
         project_manager.read_file(test_file)
+
+# Test 9: Checks the summary
+def test_project_summary(tmp_path):
+    test_dir_one = tmp_path / "project"
+    test_dir_one.mkdir()
+
+    test_file_two = test_dir_one / "main.py"
+    test_file_three = test_dir_one / "helper.py"
+    test_file_four = test_dir_one / "README.txt"
+
+    test_file_two.write_text("print('hello')")
+    test_file_three.write_text("print('world')")
+    test_file_four.write_text("Project README")
+
+    project_manager = ProjectManager(test_dir_one)
+    result = project_manager.get_project_summary()
+    expected = {
+        "total_files": 3,
+        "total_directories": 0,
+        "file_types": {
+            ".py": 2,
+            ".txt": 1
+        }
+    }
+    assert result == expected
+
+# Test 10: checks a project with no files/directories
+def test_project_summary_empty(tmp_path):
+    project_manager = ProjectManager(tmp_path)
+    result = project_manager.get_project_summary()
+    expected = {
+        "total_files": 0,
+        "total_directories": 0,
+        "file_types": {}
+    }
+    assert result == expected
