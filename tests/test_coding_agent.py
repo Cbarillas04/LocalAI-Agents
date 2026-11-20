@@ -208,3 +208,85 @@ def test_read_project_file_no_project():
 
     with pytest.raises(ValueError):
         agent.read_project_file("main.py")
+
+# Test 16: Retrieve the project tree successfully
+def test_get_project_tree_success(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    (test_dir / "main.py").write_text("print('Hello')")
+    src = test_dir / "src"
+    src.mkdir()
+    (src / "helper.py").write_text("print('Helper')")
+
+    agent.open_project(test_dir)
+
+    result = agent.get_project_tree()
+    expected = {
+        "main.py",
+        "src/",
+        "src/helper.py"
+    }
+    assert set(result) == expected
+
+# Test 17: ValueError when no opened project
+def test_get_project_tree_no_project():
+    agent = CodingAgent()
+    with pytest.raises(ValueError):
+        agent.get_project_tree()
+
+# Test 18: valueError when invalid/removed directory
+def test_get_project_tree_invalid_project(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    agent.open_project(test_dir)
+    shutil.rmtree(test_dir)
+
+    with pytest.raises(ValueError):
+        agent.get_project_tree()
+
+# Test 19: Test question is successfully prompted to AI
+def test_analyze_file_success(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    test_file = test_dir / "main.py"
+    test_file.write_text("print('Hello World')")
+
+    agent.open_project(test_dir)
+
+    # Mock prompt the AI
+    with patch.object(agent, "chat", return_value = {"answer": "Bug analysis"}) as mock_chat:
+        result = agent.analyze_file(test_file, "Find the bugs in this code")
+
+    prompt = mock_chat.call_args[0][0]
+    assert result == {"answer": "Bug analysis"}
+    assert "Find the bugs in this code" in prompt
+    assert "Analyze the code" not in prompt
+
+# Test 20: Missing file raises a ValueError
+def test_analyze_file_missing(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    agent.open_project(test_dir)
+    with pytest.raises(ValueError):
+        agent.analyze_file(test_dir / "missing.py")
+
+# Test 21: Raises ValueError when trying to analyze outside file
+def test_analyze_file_foreign(tmp_path):
+    agent = CodingAgent()
+    test_dir = tmp_path / "Project"
+    test_dir.mkdir()
+
+    foreign_file = tmp_path / "outside.py"
+    foreign_file.write_text("print('Outside')")
+
+    agent.open_project(test_dir)
+    with pytest.raises(ValueError):
+        agent.analyze_file(foreign_file)

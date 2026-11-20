@@ -54,6 +54,24 @@ class CodingAgent:
             self.project = None
             raise ValueError("Project root is not valid")
 
+    # Show project directory and file structure
+    def get_project_tree(self):
+        if self.project is None or not self.project.validate_project():
+            raise ValueError("No valid project is open")
+        return self.project.get_project_tree()
+
+    # Read content and send to AI model to analyze, returns its analysis
+    def analyze_file(self, file_path, question = None):
+        result = self.read_project_file(file_path)
+        if question is None:
+            question = "Analyze the code, explain its purpose and functionality, identify potential bugs, and suggest improvements."
+        prompt = f""" Question: {question}
+                    Code:
+                    {result}
+                """
+        return self.chat(prompt)
+
+    # Send the prompt to the AI to have a chat
     def chat(self, prompt):
         # Prompt the AI
         self.conversation.append({
