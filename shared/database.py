@@ -14,7 +14,9 @@ class DatabaseManager:
     def get_connection(self):
         # Ensure data folder exists already, if not create parent
         self.db_path.parent.mkdir(parents = True, exist_ok = True)
-        return sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
 
     # Automatically handle commiting and closing db connections
     @contextmanager

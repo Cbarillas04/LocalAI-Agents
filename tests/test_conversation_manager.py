@@ -1,4 +1,5 @@
-from datetime import datetime
+import sqlite3
+import pytest
 from shared.conversation_manager import ConversationManager
 from shared.database import DatabaseManager
 
@@ -188,3 +189,10 @@ def test_delete_conversation_missing(tmp_path):
 
     assert convo_manager.get_conversation(999) is None
     assert convo_manager.get_messages(999) == []
+
+# Test 15:
+def test_invalid_foreign_key(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    convo_manager = ConversationManager(db_path)
+    with pytest.raises(sqlite3.IntegrityError):
+        convo_manager.create_message(999, "user", "Foreign Key test")

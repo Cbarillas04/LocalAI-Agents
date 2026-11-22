@@ -86,3 +86,13 @@ def test_connection_rolls_back(tmp_path):
 
     assert result is None
 
+# Test 7: Foreign Keys are active
+def test_foreign_keys_enabled(tmp_path):
+    db_path = tmp_path / "test.db"
+    db_manager = DatabaseManager(db_path)
+    with db_manager.connection() as connection:
+        cursor = connection.execute(
+            "PRAGMA foreign_keys"
+        )
+        result = cursor.fetchall()
+    assert result[0][0] == 1
