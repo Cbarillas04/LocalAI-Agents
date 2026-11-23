@@ -1,12 +1,17 @@
 import pytest
 import shutil
 from coding_agent.coding_agent import CodingAgent
+from shared.context_manager import ContextManager
+from shared.conversation_manager import ConversationManager
 from unittest.mock import patch, MagicMock
 
 # Test 1: verify intialization
-def test_coding_agent_init():
+def test_coding_agent_init(tmp_path):
     with patch('coding_agent.coding_agent.AIClient') as mock_ai:
-        agent = CodingAgent()
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
 
         assert agent.ai == mock_ai.return_value
         # conversation only has one msg
@@ -16,9 +21,12 @@ def test_coding_agent_init():
         assert agent.conversation[0]["role"] == "system"
 
 # Test 2: chat request returns an answer
-def test_chat_success():
+def test_chat_success(tmp_path):
     with patch('coding_agent.coding_agent.AIClient') as mock_ai:
-        agent = CodingAgent()
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
 
         mock_response = MagicMock()
         mock_response.choices[0].message.content = "Python is a programming language"
@@ -44,9 +52,12 @@ def test_chat_success():
         }
 
 # Test 3: Questions and answers are saved
-def test_chat_conversation_history():
+def test_chat_conversation_history(tmp_path):
     with patch('coding_agent.coding_agent.AIClient') as mock_ai:
-        agent = CodingAgent()
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
 
         mock_response = MagicMock()
         mock_response.choices[0].message.content = "Python is a programming language"
@@ -69,7 +80,10 @@ def test_chat_conversation_history():
 
 # Test 4: Adds a valid project when root is valid
 def test_open_project_success(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
     agent.open_project(test_dir)
@@ -77,7 +91,10 @@ def test_open_project_success(tmp_path):
 
 # Test 5: ValueError on invalid root
 def test_open_project_failure(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_file = tmp_path / "Project"
 
     with pytest.raises(ValueError):
@@ -86,7 +103,10 @@ def test_open_project_failure(tmp_path):
 
 # Test 6: Gets and returns summary of an opened project
 def test_get_project_summary_success(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
 
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
@@ -108,14 +128,20 @@ def test_get_project_summary_success(tmp_path):
     }
 
 # Test 7: ValueError when no project is open
-def test_get_project_summary_no_project():
-    agent = CodingAgent()
+def test_get_project_summary_no_project(tmp_path):
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     with pytest.raises(ValueError):
         agent.get_project_summary()
 
 # Test 8: Raise ValueError when project directory is removed
 def test_get_project_summary_invalid_project(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -128,7 +154,10 @@ def test_get_project_summary_invalid_project(tmp_path):
 
 #Test 9: Returns only the file of requested file type
 def test_find_project_files_by_pattern(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -145,7 +174,10 @@ def test_find_project_files_by_pattern(tmp_path):
 
 # Test 10: Verifies empty list on return when no matching files
 def test_find_project_files_no_matches(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -158,14 +190,20 @@ def test_find_project_files_no_matches(tmp_path):
     assert result == []
 
 # Test 11: ValueError when no project opened
-def test_find_project_files_no_project():
-    agent = CodingAgent()
+def test_find_project_files_no_project(tmp_path):
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     with pytest.raises(ValueError):
         agent.find_project_files("*.py")
 
 # Test 12: file was read without issues
 def test_read_project_file_success(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -179,7 +217,10 @@ def test_read_project_file_success(tmp_path):
 
 # Test 13: ValuError when a file doesn't exist
 def test_read_project_file_missing(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -190,7 +231,10 @@ def test_read_project_file_missing(tmp_path):
 
 # Test 14: ValuerError when trying to read a file outside of project
 def test_read_project_file_foreign(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -203,15 +247,21 @@ def test_read_project_file_foreign(tmp_path):
         agent.read_project_file(foreign_file)
 
 # Test 15: ValueError when no project is open
-def test_read_project_file_no_project():
-    agent = CodingAgent()
+def test_read_project_file_no_project(tmp_path):
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
 
     with pytest.raises(ValueError):
         agent.read_project_file("main.py")
 
 # Test 16: Retrieve the project tree successfully
 def test_get_project_tree_success(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -231,14 +281,20 @@ def test_get_project_tree_success(tmp_path):
     assert set(result) == expected
 
 # Test 17: ValueError when no opened project
-def test_get_project_tree_no_project():
-    agent = CodingAgent()
+def test_get_project_tree_no_project(tmp_path):
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     with pytest.raises(ValueError):
         agent.get_project_tree()
 
 # Test 18: valueError when invalid/removed directory
 def test_get_project_tree_invalid_project(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -250,7 +306,10 @@ def test_get_project_tree_invalid_project(tmp_path):
 
 # Test 19: Test question is successfully prompted to AI
 def test_analyze_file_success(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -270,7 +329,10 @@ def test_analyze_file_success(tmp_path):
 
 # Test 20: Missing file raises a ValueError
 def test_analyze_file_missing(tmp_path):
-    agent = CodingAgent()
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
     test_dir = tmp_path / "Project"
     test_dir.mkdir()
 
@@ -280,8 +342,11 @@ def test_analyze_file_missing(tmp_path):
 
 # Test 21: Raises ValueError when trying to analyze outside file
 def test_analyze_file_foreign(tmp_path):
-    agent = CodingAgent()
-    test_dir = tmp_path / "Project"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(tmp_path / "test.db")
+
+    agent = CodingAgent(context_manager, conversation_manager)
+    test_dir = tmp_path / "project"
     test_dir.mkdir()
 
     foreign_file = tmp_path / "outside.py"
@@ -290,3 +355,26 @@ def test_analyze_file_foreign(tmp_path):
     agent.open_project(test_dir)
     with pytest.raises(ValueError):
         agent.analyze_file(foreign_file)
+
+# Test 22: Creates a
+def test_create_conversation(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+
+    result = agent.create_conversation("Test conversation")
+
+    assert isinstance(result, int)
+    assert agent.conversation_id == result
+    context = context_manager.get_context(result)
+    assert context == {
+        "project": None,
+        "active_file": None,
+        "task": None
+    }
+    # Conversation holds
+    conversation = conversation_manager.get_conversation(result)
+    assert conversation[0] == result
+    assert conversation[1] == "Test conversation"

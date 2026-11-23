@@ -67,7 +67,7 @@ class ConversationManager:
             cursor = connection.execute("""
                 SELECT * FROM messages 
                 WHERE conversation_id = ?
-                ORDER BY created_at ASC
+                ORDER BY created_at ASC, id ASC
             """,(conversation_id,))
 
             messages = cursor.fetchall()

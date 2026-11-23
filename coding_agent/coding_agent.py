@@ -2,9 +2,13 @@ from shared.ai_client import AIClient
 from coding_agent.project_manager import ProjectManager
 
 class CodingAgent:
-    def __init__(self):
+    def __init__(self, context_manager, conversation_manager):
         self.ai = AIClient()
+        self.contexts = context_manager
+        self.conversations = conversation_manager
         self.project = None
+        self.conversation_id = None
+
         # behavior of the AI
         self.system_prompt = """
             You are a technical coding helper and teacher
@@ -28,6 +32,12 @@ class CodingAgent:
             "role": "system",
             "content": self.system_prompt
         }]
+    # Create a conversation
+    def create_conversation(self, title):
+        conversation_id = self.conversations.create_conversation(title)
+        self.conversation_id = conversation_id
+        self.contexts.create_context(conversation_id)
+        return conversation_id
 
     # Get project summary of active open project
     def get_project_summary(self):
