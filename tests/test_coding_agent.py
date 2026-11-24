@@ -1,5 +1,8 @@
 import pytest
 import shutil
+
+from openai.lib.beta.agents import agent_text_format
+
 from coding_agent.coding_agent import CodingAgent
 from shared.context_manager import ContextManager
 from shared.conversation_manager import ConversationManager
@@ -378,3 +381,99 @@ def test_create_conversation(tmp_path):
     conversation = conversation_manager.get_conversation(result)
     assert conversation[0] == result
     assert conversation[1] == "Test conversation"
+
+# Test 23: Tests a conversation is opened and loaded
+def test_load_conversation(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+
+    last_id = agent.create_conversation("Test conversation")
+    result = agent.load_conversation(last_id)
+    context = context_manager.get_context(last_id)
+
+    assert context == {
+        "project": None,
+        "active_file": None,
+        "task": None
+    }
+    assert agent.conversation_id == last_id
+    assert result[1] == "Test conversation"
+
+# Test 24: Value error raised when non-existent conversation is inputted
+def test_load_conversation_failure(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+
+    with pytest.raises(ValueError, match = "No conversation with that ID"):
+        agent.load_conversation(1)
+
+    assert agent.conversation_id is None
+
+# Test 25: Existing context is not overwritten when a loading conversation
+def test_load_conversation_preserves_context(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+
+    last_id = agent.create_conversation("Test conversation")
+    context_manager.update_context(
+        last_id, "project", "C:/Projects/TestProject"
+    )
+
+    agent.load_conversation(last_id)
+    context = context_manager.get_context(last_id)
+
+    assert context["project"] == "C:/Projects/TestProject"
+
+# Test 26: Successfully deletes a conversation
+def test_delete_conversation(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+    last_id = agent.create_conversation("Test conversation")
+    agent.delete_conversation(last_id)
+
+    assert conversation_manager.get_conversation(last_id) is None
+    assert agent.conversation_id is None
+    with pytest.raises(KeyError):
+        context_manager.get_context(last_id)
+
+# Test 27: ValueError when deleting a nonexistent conversation
+def test_delete_conversation_failure(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+
+    with pytest.raises(ValueError, match="No conversation with that ID"):
+        agent.delete_conversation(1)
+    assert agent.conversation_id is None
+
+# Test 28: Deleting inactive conversation doesn't affect the active
+def test_delete_conversation_inactive(tmp_path):
+    db_path = tmp_path / "conversation.db"
+    context_manager = ContextManager()
+    conversation_manager = ConversationManager(db_path)
+
+    agent = CodingAgent(context_manager, conversation_manager)
+    convo_one_id = agent.create_conversation("Conversation 1")
+    convo_two_id = agent.create_conversation("Conversation 2")
+
+    # Keepy 2nd conversation active
+    agent.load_conversation(convo_two_id)
+    agent.delete_conversation(convo_one_id)
+
+    assert conversation_manager.get_conversation(convo_one_id) is None
+    assert agent.conversation_id == convo_two_id
+    assert conversation_manager.get_conversation(convo_two_id)[1] == "Conversation 2"

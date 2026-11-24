@@ -81,6 +81,29 @@ class CodingAgent:
                 """
         return self.chat(prompt)
 
+    # Open a conversation
+    def load_conversation(self, conversation_id):
+        result = self.conversations.get_conversation(conversation_id)
+        if result is None:
+            raise ValueError("No conversation with that ID")
+
+        self.conversation_id = conversation_id
+        # ensure that context exists, otherwise it just creates one
+        self.contexts.create_context(conversation_id)
+
+        return result
+
+    # Delete a conversation + its context
+    def delete_conversation(self, conversation_id):
+        result = self.conversations.get_conversation(conversation_id)
+        if result is None:
+            raise ValueError("No conversation with that ID")
+
+        self.conversations.delete_conversation(conversation_id)
+        self.contexts.delete_context(conversation_id)
+        if self.conversation_id == conversation_id:
+            self.conversation_id = None
+
     # Send the prompt to the AI to have a chat
     def chat(self, prompt):
         # Prompt the AI
