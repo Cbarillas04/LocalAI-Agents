@@ -16,12 +16,10 @@ class AIClient:
         self.model = model
 
     # Send a prompt; return response
-    def generate_response(self, prompt, temperature = 0.2):
+    def generate_response(self, messages, temperature = 0.2):
         response = self.client.chat.completions.create(
             model = self.model,
-            messages = [
-                {"role": "user", "content": prompt}
-            ],
+            messages = messages,
             temperature = temperature
         )
         return response.choices[0].message.content

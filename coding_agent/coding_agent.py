@@ -27,18 +27,6 @@ class CodingAgent:
             - When teaching, explain the reasoning behind the implementation
         """
 
-        # Store the conversations for each new chat
-        self.conversation = [{
-            "role": "system",
-            "content": self.system_prompt
-        }]
-    # Create a conversation
-    def create_conversation(self, title):
-        conversation_id = self.conversations.create_conversation(title)
-        self.conversation_id = conversation_id
-        self.contexts.create_context(conversation_id)
-        return conversation_id
-
     # Get project summary of active open project
     def get_project_summary(self):
         if self.project is None or not self.project.validate_project():
@@ -81,6 +69,13 @@ class CodingAgent:
                 """
         return self.chat(prompt)
 
+    # Create a conversation
+    def create_conversation(self, title):
+        conversation_id = self.conversations.create_conversation(title)
+        self.conversation_id = conversation_id
+        self.contexts.create_context(conversation_id)
+        return conversation_id
+
     # Open a conversation
     def load_conversation(self, conversation_id):
         result = self.conversations.get_conversation(conversation_id)
@@ -104,28 +99,28 @@ class CodingAgent:
         if self.conversation_id == conversation_id:
             self.conversation_id = None
 
-    # Send the prompt to the AI to have a chat
+    # Send the prompt to the AI to chat
     def chat(self, prompt):
-        # Prompt the AI
-        self.conversation.append({
-            "role": "user",
-            "content": prompt
-        })
+        if self.conversation_id is None:
+            self.create_conversation(prompt)
 
-        # Resend conversation history to model
-        response = self.ai.client.chat.completions.create(
-            model = self.ai.model,
-            messages = self.conversation,
-            temperature = 0.2
+        # Create a message from the prompt
+        self.conversations.create_message(self.conversation_id, "user", prompt)
+        # Retrieve message history, add system prompt the beginning
+        msg_history = self.conversations.get_messages(self.conversation_id)
+        messages = [{
+            "role": "system",
+            "content": self.system_prompt,
+        }]
+        messages.extend([{
+            "role": message[2],
+            "content": message[3]
+        } for message in msg_history]
         )
-        # Get the answer
-        answer = response.choices[0].message.content
 
-        self.conversation.append({
-            "role": "assistant",
-            "content": answer
-        })
+        # Send the messages to the AI
+        response = self.ai.generate_response(messages)
+        # Save the AI's response
+        self.conversations.create_message(self.conversation_id, "assistant", response)
 
-        return {
-            "answer": answer
-        }
+        return response

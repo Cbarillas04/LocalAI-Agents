@@ -8,6 +8,7 @@ from shared.context_manager import ContextManager
 from shared.conversation_manager import ConversationManager
 from unittest.mock import patch, MagicMock
 
+
 # Test 1: verify intialization
 def test_coding_agent_init(tmp_path):
     with patch('coding_agent.coding_agent.AIClient') as mock_ai:
@@ -15,13 +16,10 @@ def test_coding_agent_init(tmp_path):
         conversation_manager = ConversationManager(tmp_path / "test.db")
 
         agent = CodingAgent(context_manager, conversation_manager)
-
         assert agent.ai == mock_ai.return_value
-        # conversation only has one msg
-        assert len(agent.conversation) == 1
-        # message contains prompt
-        assert agent.conversation[0]["content"] == agent.system_prompt
-        assert agent.conversation[0]["role"] == "system"
+        # verify system prompt exists
+        assert agent.system_prompt is not None
+        assert len(agent.system_prompt) > 0
 
 # Test 2: chat request returns an answer
 def test_chat_success(tmp_path):
@@ -30,29 +28,28 @@ def test_chat_success(tmp_path):
         conversation_manager = ConversationManager(tmp_path / "test.db")
 
         agent = CodingAgent(context_manager, conversation_manager)
-
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = "Python is a programming language"
-        mock_ai.return_value.client.chat.completions.create.return_value = mock_response
-        mock_ai.return_value.model = "qwen2.5-coder-7b"
+        mock_ai.return_value.generate_response.return_value = "Python is a programming language"
 
         result = agent.chat("What is Python?")
-        call_args = mock_ai.return_value.client.chat.completions.create.call_args
+        messages = mock_ai.return_value.generate_response.call_args.args[0]
+        msg_history = conversation_manager.get_messages(agent.conversation_id)
 
-        assert result["answer"] == "Python is a programming language"
-        # verify model and temperature used
-        assert call_args.kwargs["model"] == "qwen2.5-coder-7b"
-        assert call_args.kwargs["temperature"] == 0.2
+        assert result == "Python is a programming language"
+        # verify system prompt was sent
+        assert messages[0] == {
+            "role": "system",
+            "content": agent.system_prompt
+        }
         # verify the user message was sent and recorded
-        assert agent.conversation[1] == {
+        assert messages[1] == {
             "role": "user",
             "content": "What is Python?"
         }
-        # verify the AI response made
-        assert agent.conversation[2] == {
-            "role": "assistant",
-            "content": "Python is a programming language"
-        }
+        assert msg_history[0][2] == "user"
+        assert msg_history[0][3] == "What is Python?"
+        # verify the AI response was recorded
+        assert msg_history[1][2] == "assistant"
+        assert msg_history[1][3] == "Python is a programming language"
 
 # Test 3: Questions and answers are saved
 def test_chat_conversation_history(tmp_path):
@@ -61,25 +58,42 @@ def test_chat_conversation_history(tmp_path):
         conversation_manager = ConversationManager(tmp_path / "test.db")
 
         agent = CodingAgent(context_manager, conversation_manager)
+        mock_ai.return_value.generate_response.side_effect = [
+            "Python is a programming language",
+            "Java is another programming language"
+        ]
 
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = "Python is a programming language"
-        mock_ai.return_value.client.chat.completions.create.return_value = mock_response
-        # initial setup message (system)
-        assert len(agent.conversation) == 1
+        # initial setup (no messages)
+        assert agent.conversation_id is None
+
         agent.chat("What is Python?")
-        # number of messages after first search (sys, question, answer)
-        assert len(agent.conversation) == 3
+        # number of messages after first chat (question, answer)
+        msg_history = conversation_manager.get_messages(agent.conversation_id)
+        assert len(msg_history) == 2
+
         agent.chat("What is Java?")
-        # number of messages after second search
-        # (sys, question, answer, question2, answer2)
-        assert len(agent.conversation) == 5
+        # number of messages after second chat
+        # (question1, answer1, question2, answer2)
+        msg_history = conversation_manager.get_messages(agent.conversation_id)
+        assert len(msg_history) == 4
 
         # Verify the conversation's order
-        assert agent.conversation[1]["content"] == "What is Python?"
-        assert agent.conversation[2]["content"] == "Python is a programming language"
-        assert agent.conversation[3]["content"] == "What is Java?"
-        assert agent.conversation[4]["content"] == "Python is a programming language"
+        assert msg_history[0][2] == "user"
+        assert msg_history[0][3] == "What is Python?"
+        assert msg_history[1][2] == "assistant"
+        assert msg_history[1][3] == "Python is a programming language"
+        assert msg_history[2][2] == "user"
+        assert msg_history[2][3] == "What is Java?"
+        assert msg_history[3][2] == "assistant"
+        assert msg_history[3][3] == "Java is another programming language"
+
+        # Verify the system prompt and history were sent on the second request
+        messages = mock_ai.return_value.generate_response.call_args_list[1].args[0]
+        assert len(messages) == 4
+        assert messages[0]["role"] == "system"
+        assert messages[1]["content"] == "What is Python?"
+        assert messages[2]["content"] == "Python is a programming language"
+        assert messages[3]["content"] == "What is Java?"
 
 # Test 4: Adds a valid project when root is valid
 def test_open_project_success(tmp_path):
