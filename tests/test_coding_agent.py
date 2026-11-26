@@ -21,35 +21,39 @@ def test_coding_agent_init(tmp_path):
         assert agent.system_prompt is not None
         assert len(agent.system_prompt) > 0
 
-# Test 2: chat request returns an answer
+# Test 2: Chat request returns an answer
 def test_chat_success(tmp_path):
     with patch('coding_agent.coding_agent.AIClient') as mock_ai:
         context_manager = ContextManager()
         conversation_manager = ConversationManager(tmp_path / "test.db")
 
         agent = CodingAgent(context_manager, conversation_manager)
-        mock_ai.return_value.generate_response.return_value = "Python is a programming language"
+
+        mock_ai.return_value.generate_response.return_value = (
+            "Python is a programming language"
+        )
+        mock_ai.return_value.count_tokens.side_effect = len
 
         result = agent.chat("What is Python?")
         messages = mock_ai.return_value.generate_response.call_args.args[0]
         msg_history = conversation_manager.get_messages(agent.conversation_id)
 
         assert result == "Python is a programming language"
-        # verify system prompt was sent
+        # System prompt was sent
         assert messages[0] == {
             "role": "system",
             "content": agent.system_prompt
         }
-        # verify the user message was sent and recorded
+        # User message was sent and recorded
         assert messages[1] == {
             "role": "user",
             "content": "What is Python?"
         }
         assert msg_history[0][2] == "user"
         assert msg_history[0][3] == "What is Python?"
-        # verify the AI response was recorded
         assert msg_history[1][2] == "assistant"
         assert msg_history[1][3] == "Python is a programming language"
+        assert mock_ai.return_value.count_tokens.called
 
 # Test 3: Questions and answers are saved
 def test_chat_conversation_history(tmp_path):
@@ -62,17 +66,20 @@ def test_chat_conversation_history(tmp_path):
             "Python is a programming language",
             "Java is another programming language"
         ]
+        mock_ai.return_value.count_tokens.side_effect = len
 
-        # initial setup (no messages)
+        # Initial setup (no messages)
         assert agent.conversation_id is None
 
         agent.chat("What is Python?")
-        # number of messages after first chat (question, answer)
+
+        # Number of messages after first chat (question, answer)
         msg_history = conversation_manager.get_messages(agent.conversation_id)
         assert len(msg_history) == 2
 
         agent.chat("What is Java?")
-        # number of messages after second chat
+
+        # Number of messages after second chat
         # (question1, answer1, question2, answer2)
         msg_history = conversation_manager.get_messages(agent.conversation_id)
         assert len(msg_history) == 4
@@ -94,6 +101,7 @@ def test_chat_conversation_history(tmp_path):
         assert messages[1]["content"] == "What is Python?"
         assert messages[2]["content"] == "Python is a programming language"
         assert messages[3]["content"] == "What is Java?"
+        assert mock_ai.return_value.count_tokens.call_count > 0
 
 # Test 4: Adds a valid project when root is valid
 def test_open_project_success(tmp_path):

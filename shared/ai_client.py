@@ -1,3 +1,4 @@
+import httpx
 from openai import OpenAI
 
 # Handles the communication with the local AI model
@@ -14,6 +15,7 @@ class AIClient:
             api_key = api_key
         )
         self.model = model
+        self.tokenize_url = f"{base_url.rstrip('/').removesuffix('/v1')}/tokenize"
 
     # Send a prompt; return response
     def generate_response(self, messages, temperature = 0.2):
@@ -23,3 +25,11 @@ class AIClient:
             temperature = temperature
         )
         return response.choices[0].message.content
+
+    # Convert text into tokens using llama.cpp
+    def count_tokens(self, text):
+        response = httpx.post(self.tokenize_url, json = {"content": text}, timeout = 30.0)
+        response.raise_for_status()
+        result = response.json()
+
+        return len(result["tokens"])

@@ -1,3 +1,5 @@
+import httpx
+import pytest
 from unittest.mock import patch, MagicMock
 from shared.ai_client import AIClient
 
@@ -53,3 +55,53 @@ def test_temperature():
             mock_openai.return_value.chat.completions.create.call_args.kwargs["temperature"]
         )
         assert temperature == 0.6
+
+# Test 4: Tokens are successfully counted
+def test_count_tokens_success():
+    with patch("shared.ai_client.httpx.post") as mock_post:
+        client = AIClient()
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "tokens": [101, 202, 303, 404, 505, 606]
+        }
+        mock_post.return_value = mock_response
+
+        result = client.count_tokens("Python is a programming language.")
+
+        assert result == 6
+
+        mock_post.assert_called_once_with(
+            client.tokenize_url,
+            json = {"content": "Python is a programming language."},
+            timeout = 30.0
+        )
+
+# Test 5: Empty text returns zero tokens
+def test_count_tokens_empty():
+    with patch("shared.ai_client.httpx.post") as mock_post:
+        client = AIClient()
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"tokens": []}
+        mock_post.return_value = mock_response
+
+        result = client.count_tokens("")
+
+        assert result == 0
+
+# Test 6: HTTP errors
+def test_count_tokens_http_error():
+    with patch("shared.ai_client.httpx.post") as mock_post:
+        client = AIClient()
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Server error",
+            request = MagicMock(),
+            response = MagicMock()
+        )
+        mock_post.return_value = mock_response
+
+        with pytest.raises(httpx.HTTPStatusError):
+            client.count_tokens("Python")

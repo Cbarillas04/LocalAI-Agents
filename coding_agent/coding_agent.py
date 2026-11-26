@@ -108,15 +108,11 @@ class CodingAgent:
         self.conversations.create_message(self.conversation_id, "user", prompt)
         # Retrieve message history, add system prompt the beginning
         msg_history = self.conversations.get_messages(self.conversation_id)
-        messages = [{
-            "role": "system",
-            "content": self.system_prompt,
-        }]
-        messages.extend([{
-            "role": message[2],
-            "content": message[3]
-        } for message in msg_history]
-        )
+
+        conversation_messages = [{"role": message[2], "content": message[3]} for message in msg_history]
+
+        # Select messages within our budget
+        messages = self.contexts.select_messages(self.system_prompt, conversation_messages, self.ai.count_tokens)
 
         # Send the messages to the AI
         response = self.ai.generate_response(messages)

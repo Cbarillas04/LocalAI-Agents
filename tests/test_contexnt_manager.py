@@ -105,3 +105,139 @@ def test_delete_context_missing():
     manager.delete_context("conversation_1")
 
     assert manager.contexts == {}
+
+# Helper for tests 13 - 20
+def mock_token_counter(content):
+    return len(content)
+
+# Test 13: All conversation messages are included when they fit
+def test_select_messages_all_fit():
+    manager = ContextManager()
+
+    sys_prompt = "You are a coding assistant."
+    messages = [
+        {"role": "user", "content": "What is Python?"},
+        {"role": "assistant", "content": "Python is a programming language."},
+        {"role": "user", "content": "What is a variable?"}
+    ]
+    results  = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert len(results) == 4
+    assert results[0]["content"] == "You are a coding assistant."
+    assert results[1]["content"] == "What is Python?"
+    assert results[2]["content"] == "Python is a programming language."
+    assert results[3]["content"] == "What is a variable?"
+    assert results[0]["role"] == "system"
+    assert results[1]["role"] == "user"
+    assert results[2]["role"] == "assistant"
+    assert results[3]["role"] == "user"
+
+# Test 14: Older messages get trimmed when budget is exceeded
+def test_select_messages_trims_oldest():
+    manager = ContextManager(40, 5, 5)
+
+    sys_prompt = "System"
+    messages = [
+        {"role": "user", "content": "Old question"},
+        {"role": "assistant", "content": "Old answer"},
+        {"role": "user", "content": "New question"}
+    ]
+
+    results = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert len(results) == 2
+    assert results[0]["role"] == "system"
+    assert results[1]["content"] == "New question"
+
+# Test 15:ValueError when newest message can't fit
+def test_select_messages_latest_large():
+    manager = ContextManager(20, 5, 5)
+
+    sys_prompt = "s"
+    messages = [
+        {"role": "user", "content": "What is Python?"},
+        {"role": "assistant", "content": "Python is a programming language."},
+        {"role": "user", "content": "What is a variable?"}
+    ]
+
+    with pytest.raises(ValueError):
+        manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+# Test 16: Successfully passes when message fills exact budget
+def test_select_messages_exact_budget():
+    manager = ContextManager(20, 5, 5)
+    manager.message_overhead = 4
+
+    sys_prompt = "s"
+    messages = [
+        {"role": "user", "content": "a"}
+    ]
+
+    results = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert results == [
+        {"role": "system", "content": "s"},
+        {"role": "user", "content": "a"}
+    ]
+
+# Test 17: Returned messages are still in order
+def test_select_messages_preserves_order():
+    manager = ContextManager()
+    manager.message_overhead = 4
+
+    sys_prompt = "s"
+    messages = [
+        {"role": "user", "content": "First"},
+        {"role": "assistant", "content": "Second"},
+        {"role": "user", "content": "Third"}
+    ]
+
+    results = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert results[1:] == messages
+
+# Test 18: Messages returned don't start with an assistant response
+def test_select_messages_removes_leading_assistant():
+    manager = ContextManager(40, 5, 5)
+    manager.message_overhead = 4
+
+    sys_prompt = "s"
+    messages = [
+        {"role": "user", "content": "Old question"},
+        {"role": "assistant", "content": "a"},
+        {"role": "user", "content": "b"}
+    ]
+
+    results = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert results == [
+        {"role": "system", "content": "s"},
+        {"role": "user", "content": "b"}
+    ]
+
+# Test 19: ValueError when system has no usable budget
+def test_select_messages_sys_prompt_large():
+    manager = ContextManager(20, 5, 5)
+    manager.message_overhead = 4
+
+    sys_prompt = "This system prompt is too large"
+    messages = []
+
+    with pytest.raises(ValueError):
+        manager.select_messages(
+            sys_prompt, messages, mock_token_counter
+        )
+
+# Test 20: Only returns system prompt if no messages exist
+def test_select_messages_empty_history():
+    manager = ContextManager()
+    manager.message_overhead = 4
+
+    sys_prompt = "System"
+    messages = []
+
+    results = manager.select_messages(sys_prompt, messages, mock_token_counter)
+
+    assert results == [
+        {"role": "system", "content": "System"}
+    ]
