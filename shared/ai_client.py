@@ -33,8 +33,11 @@ class AIClient:
 
     # Convert text into tokens using llama.cpp
     def count_tokens(self, text):
-        response = httpx.post(self.tokenize_url, json = {"content": text}, timeout = 30.0)
-        response.raise_for_status()
-        result = response.json()
-
-        return len(result["tokens"])
+        try:
+            response = httpx.post(self.tokenize_url, json = {"content": text}, timeout = 30.0)
+            response.raise_for_status()
+            result = response.json()
+            return len(result["tokens"])
+        except httpx.RequestError:
+            # estimate fallback if server is down
+            return len(text) // 3

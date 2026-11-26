@@ -142,3 +142,13 @@ def test_max_tokens():
             mock_openai.return_value.chat.completions.create.call_args.kwargs["max_tokens"]
         )
         assert max_tokens == 123
+
+# Test 9: Estimate is returned instead if server is down
+def test_count_tokens_server_down():
+    with patch("shared.ai_client.httpx.post") as mock_post:
+        client = AIClient()
+        mock_post.side_effect = httpx.ConnectError("Server is down")
+
+        result = client.count_tokens("Python is a programming language.")
+
+        assert result == len("Python is a programming language.") // 3
