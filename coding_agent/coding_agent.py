@@ -102,14 +102,12 @@ class CodingAgent:
     # Send the prompt to the AI to chat
     def chat(self, prompt):
         if self.conversation_id is None:
-            self.create_conversation(prompt)
+            self.create_conversation(prompt[:60])
 
-        # Create a message from the prompt
-        self.conversations.create_message(self.conversation_id, "user", prompt)
         # Retrieve message history, add system prompt the beginning
         msg_history = self.conversations.get_messages(self.conversation_id)
-
         conversation_messages = [{"role": message[2], "content": message[3]} for message in msg_history]
+        conversation_messages.append({"role": "user", "content": prompt})
 
         # Select messages within our budget
         messages = self.contexts.select_messages(self.system_prompt, conversation_messages, self.ai.count_tokens)
@@ -117,6 +115,7 @@ class CodingAgent:
         # Send the messages to the AI
         response = self.ai.generate_response(messages)
         # Save the AI's response
+        self.conversations.create_message(self.conversation_id, "user", prompt)
         self.conversations.create_message(self.conversation_id, "assistant", response)
 
         return response
