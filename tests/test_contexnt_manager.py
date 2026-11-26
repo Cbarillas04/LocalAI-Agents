@@ -134,7 +134,7 @@ def test_select_messages_all_fit():
 
 # Test 14: Older messages get trimmed when budget is exceeded
 def test_select_messages_trims_oldest():
-    manager = ContextManager(40, 5, 5)
+    manager = ContextManager(40, 5, 5, 4, 0)
 
     sys_prompt = "System"
     messages = [
@@ -165,7 +165,7 @@ def test_select_messages_latest_large():
 
 # Test 16: Successfully passes when message fills exact budget
 def test_select_messages_exact_budget():
-    manager = ContextManager(20, 5, 5)
+    manager = ContextManager(20, 5, 5, 4, 0)
     manager.message_overhead = 4
 
     sys_prompt = "s"

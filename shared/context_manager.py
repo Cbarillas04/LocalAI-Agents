@@ -1,5 +1,12 @@
 class ContextManager:
-    def __init__(self, context_window = 16384, max_response_tokens = 2500, context_safety_margin = 884):
+    def __init__(
+            self,
+            context_window = 16384,
+            max_response_tokens = 2500,
+            context_safety_margin = 884,
+            message_overhead = 5,
+            request_overhead = 3
+    ):
         # confirm all inputs valid integers
         self._check_positive_int("context_window", context_window)
         self._check_positive_int("max_response_tokens", max_response_tokens)
@@ -17,7 +24,8 @@ class ContextManager:
         self.context_window = context_window
         self.max_response_tokens = max_response_tokens
         self.context_safety_margin = context_safety_margin
-        self.message_overhead = 4
+        self.message_overhead = message_overhead
+        self.request_overhead = request_overhead
 
     # helper to check integer validation
     @staticmethod
@@ -65,7 +73,7 @@ class ContextManager:
     # Message selection for limiting tokens (messages: conversation history)
     def select_messages(self, sys_prompt, messages, token_counter):
         # Validate our system prompt isn't too large
-        budget = self.max_prompt_tokens - token_counter(sys_prompt) - self.message_overhead
+        budget = self.max_prompt_tokens - token_counter(sys_prompt) - self.message_overhead - self.request_overhead
         if budget <= 0:
             raise ValueError("System prompt exceeds the prompt budget")
 
