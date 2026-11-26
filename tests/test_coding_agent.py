@@ -29,9 +29,10 @@ def test_chat_success(tmp_path):
 
         agent = CodingAgent(context_manager, conversation_manager)
 
-        mock_ai.return_value.generate_response.return_value = (
-            "Python is a programming language"
-        )
+        mock_ai.return_value.generate_response.return_value = {
+            "content": "Python is a programming language",
+            "truncated": False
+        }
         mock_ai.return_value.count_tokens.side_effect = len
 
         result = agent.chat("What is Python?")
@@ -63,8 +64,8 @@ def test_chat_conversation_history(tmp_path):
 
         agent = CodingAgent(context_manager, conversation_manager)
         mock_ai.return_value.generate_response.side_effect = [
-            "Python is a programming language",
-            "Java is another programming language"
+            {"content": "Python is a programming language", "truncated": False},
+            {"content": "Java is another programming language", "truncated": False}
         ]
         mock_ai.return_value.count_tokens.side_effect = len
 
@@ -499,3 +500,60 @@ def test_delete_conversation_inactive(tmp_path):
     assert conversation_manager.get_conversation(convo_one_id) is None
     assert agent.conversation_id == convo_two_id
     assert conversation_manager.get_conversation(convo_two_id)[1] == "Conversation 2"
+
+# Test 29: A truncated reply gets an attached note
+def test_chat_truncated_response(tmp_path):
+    with patch('coding_agent.coding_agent.AIClient') as mock_ai:
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
+
+        mock_ai.return_value.generate_response.return_value = {
+            "content": "def add(a, b):",
+            "truncated": True
+        }
+        mock_ai.return_value.count_tokens.side_effect = len
+
+        result = agent.chat("Write an add function")
+        msg_history = conversation_manager.get_messages(agent.conversation_id)
+
+        assert result.startswith("def add(a, b):")
+        assert "cut off" in result
+        assert msg_history[1][2] == "assistant"
+        assert msg_history[1][3] == result
+
+# Test 30: The response cap is sent to the AI client
+def test_chat_passes_max_tokens(tmp_path):
+    with patch('coding_agent.coding_agent.AIClient') as mock_ai:
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
+
+        mock_ai.return_value.generate_response.return_value = {
+            "content": "ok",
+            "truncated": False
+        }
+        mock_ai.return_value.count_tokens.side_effect = len
+
+        agent.chat("Hi")
+
+        kwargs = mock_ai.return_value.generate_response.call_args.kwargs
+        assert kwargs["max_tokens"] == context_manager.max_response_tokens
+
+# Test 31: Failed AI call doesn't save user's message
+def test_chat_failure_saves_nothing(tmp_path):
+    with patch('coding_agent.coding_agent.AIClient') as mock_ai:
+        context_manager = ContextManager()
+        conversation_manager = ConversationManager(tmp_path / "test.db")
+
+        agent = CodingAgent(context_manager, conversation_manager)
+
+        mock_ai.return_value.generate_response.side_effect = RuntimeError("server down")
+        mock_ai.return_value.count_tokens.side_effect = len
+
+        with pytest.raises(RuntimeError):
+            agent.chat("What is Python?")
+
+        assert conversation_manager.get_messages(agent.conversation_id) == []

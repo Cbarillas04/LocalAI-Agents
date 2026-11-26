@@ -113,7 +113,12 @@ class CodingAgent:
         messages = self.contexts.select_messages(self.system_prompt, conversation_messages, self.ai.count_tokens)
 
         # Send the messages to the AI
-        response = self.ai.generate_response(messages)
+        result = self.ai.generate_response(messages, max_tokens = self.contexts.max_response_tokens)
+        response = result["content"]
+        # Check for response cut off
+        if result["truncated"]:
+            response += "\n\n[Response was cut off at the token limit.]"
+
         # Save the AI's response
         self.conversations.create_message(self.conversation_id, "user", prompt)
         self.conversations.create_message(self.conversation_id, "assistant", response)

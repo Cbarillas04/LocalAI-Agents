@@ -20,6 +20,7 @@ def test_generate_response():
         client = AIClient()
         mock_response = MagicMock()
         mock_response.choices[0].message.content = "Python is a programming language"
+        mock_response.choices[0].finish_reason = "stop"
 
         mock_openai.return_value.chat.completions.create.return_value = mock_response
 
@@ -30,11 +31,15 @@ def test_generate_response():
 
         result = client.generate_response(messages)
 
-        assert result == "Python is a programming language"
+        assert result == {
+            "content": "Python is a programming language",
+            "truncated": False
+        }
         mock_openai.return_value.chat.completions.create.assert_called_once_with(
             model = "qwen2.5-coder-7b",
             messages = messages,
-            temperature = 0.2
+            temperature = 0.2,
+            max_tokens = 2500
         )
 
 # Test 3: Temperature passed to model
@@ -43,6 +48,7 @@ def test_temperature():
         client = AIClient()
         mock_response = MagicMock()
         mock_response.choices[0].message.content = "Python is a programming language"
+        mock_response.choices[0].finish_reason = "stop"
 
         mock_openai.return_value.chat.completions.create.return_value = mock_response
         messages = [
@@ -105,3 +111,34 @@ def test_count_tokens_http_error():
 
         with pytest.raises(httpx.HTTPStatusError):
             client.count_tokens("Python")
+
+# Test 7: A cut off is flagged as truncated
+def test_generate_response_truncated():
+    with patch("shared.ai_client.OpenAI") as mock_openai:
+        client = AIClient()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "def add(a, b):"
+        mock_response.choices[0].finish_reason = "length"
+
+        mock_openai.return_value.chat.completions.create.return_value = mock_response
+
+        result = client.generate_response([{"role": "user", "content": "Write add"}])
+
+        assert result == {"content": "def add(a, b):", "truncated": True}
+
+# Test 8: max_tokens is passed to the model
+def test_max_tokens():
+    with patch("shared.ai_client.OpenAI") as mock_openai:
+        client = AIClient()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "Hello"
+        mock_response.choices[0].finish_reason = "stop"
+
+        mock_openai.return_value.chat.completions.create.return_value = mock_response
+
+        client.generate_response([{"role": "user", "content": "Yo"}], max_tokens = 123)
+
+        max_tokens = (
+            mock_openai.return_value.chat.completions.create.call_args.kwargs["max_tokens"]
+        )
+        assert max_tokens == 123

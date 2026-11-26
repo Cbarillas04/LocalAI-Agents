@@ -18,13 +18,18 @@ class AIClient:
         self.tokenize_url = f"{base_url.rstrip('/').removesuffix('/v1')}/tokenize"
 
     # Send a prompt; return response
-    def generate_response(self, messages, temperature = 0.2):
+    def generate_response(self, messages, temperature = 0.2, max_tokens = 2500):
         response = self.client.chat.completions.create(
             model = self.model,
             messages = messages,
-            temperature = temperature
+            temperature = temperature,
+            max_tokens = max_tokens,
         )
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        return {
+            "content": choice.message.content,
+            "truncated": choice.finish_reason == "length",
+        }
 
     # Convert text into tokens using llama.cpp
     def count_tokens(self, text):
